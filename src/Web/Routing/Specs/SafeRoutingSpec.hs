@@ -9,20 +9,6 @@ import Web.Routing.SafeRouting
 import Web.Routing.AbstractRouter
 import qualified Data.Text as T
 
-{-
-     it "should capture variables in routes" $
-          do matchRoute "/bar/5" routingTree `shouldBe` oneMatch (vMap [("baz", "5")]) [3]
-             matchRoute "/bar/23/baz" routingTree `shouldBe` oneMatch (vMap [("baz", "23")]) [4]
-             matchRoute "/bar/23/baz/100" routingTree `shouldBe` oneMatch (vMap [("baz", "23"), ("bim", "100")]) [4]
-             matchRoute "/ba/23/100" routingTree `shouldBe` oneMatch (vMap [("baz", "23"), ("bim", "100")]) [4]
-             matchRoute "/entry/344/2014-20-14T12:23" routingTree `shouldBe` oneMatch (vMap [("cid", "344"), ("since", "2014-20-14T12:23")]) [6]
-             matchRoute "/entry/bytags/344/2014-20-14T12:23" routingTree `shouldBe` oneMatch (vMap [("cid", "344"), ("since", "2014-20-14T12:23")]) [7]
-             matchRoute "/entry/2/rel/3" routingTree `shouldBe` oneMatch (vMap [("eid", "2"), ("cid", "3")]) [9]
-       it "should handle multiple possibile matches correctly" $
-          do matchRoute "/bar/bingo" routingTree `shouldBe` multiMatch
-             matchRoute "/entry/1/audit" routingTree `shouldBe` multiMatch'
--}
-
 data ReturnVar
    = IntVar Int
    | StrVar T.Text
