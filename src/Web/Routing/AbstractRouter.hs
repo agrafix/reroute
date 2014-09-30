@@ -1,10 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 module Web.Routing.AbstractRouter where
 
 import Control.Applicative
@@ -51,7 +48,7 @@ hookRoute :: (Monad m, AbstractRouter r, Eq reqTypes, Hashable reqTypes)
           -> RouteAction r as
           -> RegistryT r middleware reqTypes m ()
 hookRoute reqType path action =
-    modify $ \(rs :: RegistryState r reqTypes) ->
+    modify $ \rs ->
         rs { rs_registry =
                  let reg = fromMaybe emptyRegistry (HM.lookup reqType (rs_registry rs))
                      reg' = defRoute path action reg
