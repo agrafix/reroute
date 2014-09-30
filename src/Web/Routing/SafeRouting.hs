@@ -4,7 +4,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -23,25 +22,26 @@ import qualified Data.Text as T
 data RouteHandle m a
    = forall as. RouteHandle (Path as) (HListElim as (m a))
 
-instance IsPath Path where
-    type CaptureFreePath Path = '[]
-    combineSubcomp = (</>)
-
 newtype HListElim' x ts = HListElim' { flipHListElim :: HListElim ts x }
 
-typesafeRegistry :: AnyRouteRegistryIf Path (HListElim' (m a)) m a (PathMap (m a))
-typesafeRegistry =
-    AnyRouteRegistryIf
-    { rr_emptyRegistry = emptyPathMap
-    , rr_rootPath = Empty
-    , rr_defRoute =
-        \path action m ->
-            insertPathMap (RouteHandle path (flipHListElim action)) m
-    , rr_matchRoute =
-        \m pathPieces ->
-            let matches = match m pathPieces
-            in zip (replicate (length matches) HM.empty) matches
-    }
+data SafeRouter (m :: * -> *) a = SafeRouter
+
+instance AbstractRouter (SafeRouter m a) where
+    newtype Registry (SafeRouter m a) = SafeRouterReg (PathMap (m a))
+    newtype RoutePath (SafeRouter m a) xs = SafeRouterPath (Path xs)
+    type RouteAction (SafeRouter m a) = HListElim' (m a)
+    type RouteAppliedAction (SafeRouter m a) = m a
+    subcompCombine (SafeRouterPath p1) (SafeRouterPath p2) =
+        SafeRouterPath $
+        p1 </> p2
+    emptyRegistry = SafeRouterReg emptyPathMap
+    rootPath = SafeRouterPath Empty
+    defRoute (SafeRouterPath path) action (SafeRouterReg m) =
+        SafeRouterReg $
+        insertPathMap (RouteHandle path (flipHListElim action)) m
+    matchRoute (SafeRouterReg m) pathPieces =
+        let matches = match m pathPieces
+        in zip (replicate (length matches) HM.empty) matches
 
 type family HListElim (ts :: [*]) (a :: *) :: *
 type instance HListElim '[] a = a

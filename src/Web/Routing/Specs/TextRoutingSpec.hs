@@ -4,7 +4,7 @@ module Web.Routing.Specs.TextRoutingSpec (spec) where
 import Test.Hspec
 
 import Web.Routing.TextRouting
-import Web.Routing.AbstractRouter
+import qualified Web.Routing.AbstractRouter as R
 import qualified Data.Vector as V
 import qualified Data.HashMap.Strict as HM
 
@@ -21,9 +21,9 @@ matchNodeDesc =
     do it "shouldn't match to root node" $
           matchNode "foo" RouteNodeRoot `shouldBe` (False, Nothing)
        it "should capture basic variables" $
-          matchNode "123" (RouteNodeCapture (CaptureVar "x")) `shouldBe` (True, Just (CaptureVar "x", "123"))
+          matchNode "123" (RouteNodeCapture (R.CaptureVar "x")) `shouldBe` (True, Just (R.CaptureVar "x", "123"))
        it "should work with regex" $
-          matchNode "123" (RouteNodeRegex (CaptureVar "x") (buildRegex "^[0-9]+$")) `shouldBe` (True, Just (CaptureVar "x", "123"))
+          matchNode "123" (RouteNodeRegex (R.CaptureVar "x") (buildRegex "^[0-9]+$")) `shouldBe` (True, Just (R.CaptureVar "x", "123"))
 
 matchRouteDesc :: Spec
 matchRouteDesc =
@@ -47,7 +47,7 @@ matchRouteDesc =
              matchRoute "/entry/1/audit" routingTree `shouldBe` multiMatch'
     where
       vMap kv =
-          HM.fromList $ map (\(k, v) -> (CaptureVar k, v)) kv
+          HM.fromList $ map (\(k, v) -> (R.CaptureVar k, v)) kv
       multiMatch =
           ((oneMatch emptyParamMap [5])
             ++ oneMatch (vMap [("baz", "bingo")]) [3])
@@ -78,9 +78,9 @@ parseRouteNodeDesc =
     do it "parses text nodes correctly" $
           parseRouteNode "foo" `shouldBe` RouteNodeText "foo"
        it "parses capture variables" $
-          parseRouteNode ":bar" `shouldBe` RouteNodeCapture (CaptureVar "bar")
+          parseRouteNode ":bar" `shouldBe` RouteNodeCapture (R.CaptureVar "bar")
        it "parses regex capture variables" $
-          parseRouteNode "{bar:^[0-9]$}" `shouldBe` RouteNodeRegex (CaptureVar "bar") (buildRegex "^[0-9]$")
+          parseRouteNode "{bar:^[0-9]$}" `shouldBe` RouteNodeRegex (R.CaptureVar "bar") (buildRegex "^[0-9]$")
 
 addToRoutingTreeDesc :: Spec
 addToRoutingTreeDesc =
@@ -104,7 +104,7 @@ addToRoutingTreeDesc =
                    [ RoutingTree { rt_node = RouteData{rd_node = RouteNodeText "foo", rd_data = Nothing}
                                  , rt_children =
                                      V.fromList
-                                          [ RoutingTree { rt_node = RouteData { rd_node = RouteNodeCapture (CaptureVar "bar")
+                                          [ RoutingTree { rt_node = RouteData { rd_node = RouteNodeCapture (R.CaptureVar "bar")
                                                                               , rd_data = Just [True]
                                                                               }
                                                         , rt_children = V.fromList xs}]}]}

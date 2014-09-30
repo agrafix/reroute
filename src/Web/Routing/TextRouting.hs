@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 module Web.Routing.TextRouting where
@@ -17,9 +16,7 @@ import qualified Data.Vector.Mutable as VM
 import qualified Text.Regex as Regex
 
 -- | Combine two routes, ensuring that the slashes don't get messed up
-combineRoute :: TPath '() -> TPath a -> TPath a
-combineRoute (TPath r1) (TPath r2) =
-    TPath $
+combineRoute r1 r2 =
     case T.uncons r1 of
       Nothing -> T.concat ["/", r2']
       Just ('/', _) -> T.concat [r1', r2']
@@ -36,29 +33,34 @@ combineRoute (TPath r1) (TPath r2) =
           then ""
           else if T.head r2 == '/' then T.drop 1 r2 else r2
 
-type TextPath = TPath '()
-type TextAction m r = TAction m r '()
+type TextAction m r = TAction m r '[]
 
 newtype TPath (a :: ())
     = TPath { unTPath :: T.Text }
     deriving (Show, Eq, IsString, Read, Ord)
 
-newtype TAction m r (p :: ())
+newtype TAction m r (p :: [*])
     = TAction (m r)
 
-instance IsPath TPath where
-    type CaptureFreePath TPath = '()
-    combineSubcomp = combineRoute
+newtype TActionAppl m r
+    = TActionAppl (m r)
 
-textRegistry :: AnyRouteRegistryIf TPath (TAction m r) m r (RoutingTree (m r))
-textRegistry =
-    AnyRouteRegistryIf
-    { rr_emptyRegistry = emptyRoutingTree
-    , rr_rootPath = "/"
-    , rr_defRoute =
-        \(TPath t) (TAction a) tree -> addToRoutingTree t a tree
-    , rr_matchRoute = (flip matchRoute')
-    }
+data TextRouter (m :: * -> *) a = TextRouter
+
+instance AbstractRouter (TextRouter m a) where
+    newtype Registry (TextRouter m a) = TextRouterRegistry (RoutingTree (m a))
+    newtype RoutePath (TextRouter m a) xs = TextRouterPath T.Text
+    type RouteAction (TextRouter m a) = TAction m a
+    type RouteAppliedAction (TextRouter m a) = TActionAppl m a
+    subcompCombine (TextRouterPath p1) (TextRouterPath p2) =
+        TextRouterPath $ combineRoute p1 p2
+    emptyRegistry = TextRouterRegistry emptyRoutingTree
+    rootPath = TextRouterPath "/"
+    defRoute (TextRouterPath p) (TAction a) (TextRouterRegistry tree) =
+        TextRouterRegistry $
+        addToRoutingTree p a tree
+    matchRoute (TextRouterRegistry tree) path =
+        map (\(x, a) -> (x, TActionAppl a)) $ matchRoute' path tree
 
 data RegexWrapper
    = RegexWrapper

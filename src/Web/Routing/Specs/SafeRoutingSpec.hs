@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Web.Routing.Specs.SafeRoutingSpec where
 
@@ -15,6 +16,10 @@ data ReturnVar
    | BoolVar Bool
    | ListVar [ReturnVar]
    deriving (Show, Eq, Read)
+
+defR :: (Monad m, HListElim ts (m ReturnVar) ~ HListElim ts x) => Path ts -> HListElim ts x -> RegistryT (SafeRouter m ReturnVar) middleware Bool m ()
+defR path action = hookRoute True (SafeRouterPath path) (HListElim' action)
+
 
 spec :: Spec
 spec =
@@ -41,20 +46,12 @@ spec =
       checkRoute r x =
           let matches = handleFun (filter (not . T.null) $ T.splitOn "/" r)
           in (map (runIdentity . snd) matches) `shouldBe` x
-      regIf = typesafeRegistry
 
       handleFun :: [T.Text] -> [(ParamMap, Identity ReturnVar)]
       handleFun = handleFun' True
       (_, handleFun', _) =
-          runIdentity (runRegistry regIf handleDefs)
+          runIdentity (runRegistry SafeRouter handleDefs)
 
-      defR :: Path xs -> (HListElim xs (Identity ReturnVar))
-           -> RegistryT Path (HListElim' (Identity ReturnVar))
-              Identity ReturnVar (PathMap (Identity ReturnVar)) [ReturnVar] Bool Identity ()
-      defR path action = hookRoute True path (HListElim' action)
-
-      handleDefs :: RegistryT Path (HListElim' (Identity ReturnVar))
-                    Identity ReturnVar (PathMap (Identity ReturnVar)) [ReturnVar] Bool Identity ()
       handleDefs =
           do defR root $ return (StrVar "root")
              defR "bar" $ return (StrVar "bar")
