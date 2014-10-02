@@ -1,7 +1,10 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
+#if MIN_VERSION_base(4,7,0)
 {-# LANGUAGE AllowAmbiguousTypes #-}
+#endif
 module Web.Routing.Specs.SafeRoutingSpec where
 
 import Test.Hspec
