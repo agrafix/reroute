@@ -3,6 +3,8 @@ reroute
 
 [![Build Status](https://travis-ci.org/agrafix/reroute.svg)](https://travis-ci.org/agrafix/reroute)
 
+[![Hackage Deps](https://img.shields.io/hackage-deps/v/reroute.svg)](http://packdeps.haskellers.com/reverse/reroute)
+
 # Intro
 
 Hackage: http://hackage.haskell.org/package/reroute
