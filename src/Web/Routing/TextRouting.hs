@@ -16,6 +16,7 @@ import qualified Data.Vector.Mutable as VM
 import qualified Text.Regex as Regex
 
 -- | Combine two routes, ensuring that the slashes don't get messed up
+combineRoute :: T.Text -> T.Text -> T.Text
 combineRoute r1 r2 =
     case T.uncons r1 of
       Nothing -> T.concat ["/", r2']
@@ -51,7 +52,7 @@ instance AbstractRouter (TextRouter m a) where
     newtype Registry (TextRouter m a) = TextRouterRegistry (RoutingTree (m a))
     newtype RoutePath (TextRouter m a) xs = TextRouterPath T.Text
     type RouteAction (TextRouter m a) = TAction m a
-    type RouteAppliedAction (TextRouter m a) = TActionAppl m a
+    type RouteAppliedAction (TextRouter m a) = m a
     subcompCombine (TextRouterPath p1) (TextRouterPath p2) =
         TextRouterPath $ combineRoute p1 p2
     emptyRegistry = TextRouterRegistry emptyRoutingTree
@@ -60,7 +61,7 @@ instance AbstractRouter (TextRouter m a) where
         TextRouterRegistry $
         addToRoutingTree p a tree
     matchRoute (TextRouterRegistry tree) path =
-        map (\(x, a) -> (x, TActionAppl a)) $ matchRoute' path tree
+        matchRoute' path tree
 
 data RegexWrapper
    = RegexWrapper
