@@ -76,7 +76,9 @@ insertPolyMap path (action :: a -> HList ts -> x) polyMap =
           Just action' ->
               PMCons (insertPathMap' path (flip action') pathMap) polyMap'
           Nothing ->
-               PMCons pathMap (insertPolyMap path action polyMap')
+               if typeOf (undefined :: a) < typeOf (undefined :: b)
+               then PMCons (insertPathMap' path (flip action) emptyPathMap) polyMap
+               else PMCons pathMap (insertPolyMap path action polyMap')
 
 lookupPolyMap :: T.Text -> [T.Text] -> PolyMap x -> [x]
 lookupPolyMap _ _ PMNil = []
