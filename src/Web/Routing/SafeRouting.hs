@@ -1,11 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+
 module Web.Routing.SafeRouting where
 
+import qualified Data.PolyMap as PM
 import Web.Routing.AbstractRouter
 
 import Data.HList
@@ -53,65 +55,45 @@ data Path (as :: [*]) where
   StaticCons :: T.Text -> Path as -> Path as -- append a static path piece to path
   VarCons :: (PathPiece a, Typeable a) => Path as -> Path (a ': as) -- append a param to path
 
-data PolyMap x where
-  PMNil :: PolyMap x
-  PMCons :: (Typeable a, PathPiece a) => PathMap (a -> x) -> PolyMap x -> PolyMap x
+data PathMap x =
+  PathMap
+  { pm_here :: [x]
+  , pm_staticMap :: HM.HashMap T.Text (PathMap x)
+  , pm_polyMap :: PM.PolyMap PathPiece PathMap x
+  }
 
-data Id a = Id { getId :: a }
-
-castDefType :: (Typeable a, Typeable b) => (a -> c) -> Maybe (b -> c)
-castDefType x = fmap getId (gcast1 (Id x))
-
-insertPolyMap ::
-  (Typeable a, PathPiece a)
-  => Path ts
-  -> (a -> HList ts -> x)
-  -> PolyMap x
-  -> PolyMap x
-insertPolyMap path (action :: a -> HList ts -> x) polyMap =
-  case polyMap of
-    PMNil -> PMCons (insertPathMap' path (flip action) emptyPathMap) PMNil
-    PMCons (pathMap :: PathMap (b -> x)) polyMap' ->
-        case castDefType action of
-          Just action' ->
-              PMCons (insertPathMap' path (flip action') pathMap) polyMap'
-          Nothing ->
-               if typeOf (undefined :: a) < typeOf (undefined :: b)
-               then PMCons (insertPathMap' path (flip action) emptyPathMap) polyMap
-               else PMCons pathMap (insertPolyMap path action polyMap')
-
-lookupPolyMap :: T.Text -> [T.Text] -> PolyMap x -> [x]
-lookupPolyMap _ _ PMNil = []
-lookupPolyMap pp pps (PMCons pathMap polyMap') =
-  (maybeToList (fromPathPiece pp) >>= \val -> fmap ($ val) (match pathMap pps))
-  ++ lookupPolyMap pp pps polyMap'
-
-
-emptyPolyMap :: PolyMap x
-emptyPolyMap = PMNil
-
-data PathMap x = PathMap [x] (HM.HashMap T.Text (PathMap x)) (PolyMap x)
+instance Functor PathMap where
+  fmap f (PathMap h s p) = PathMap (fmap f h) (fmap (fmap f) s) (fmap f p)
 
 emptyPathMap :: PathMap x
-emptyPathMap = PathMap mempty mempty emptyPolyMap
+emptyPathMap = PathMap mempty mempty PM.empty
+
+instance Monoid (PathMap x) where
+  mempty = emptyPathMap
+  mappend (PathMap h1 s1 p1) (PathMap h2 s2 p2) =
+    PathMap (h1 `mappend` h2) (HM.unionWith mappend s1 s2) (PM.unionWith mappend p1 p2)
 
 insertPathMap' :: Path ts -> (HList ts -> x) -> PathMap x -> PathMap x
-insertPathMap' path action (PathMap as m pm) =
+insertPathMap' path action (PathMap h s p) =
   case path of
-    Empty -> PathMap (action HNil : as) m pm
-    StaticCons pathPiece xs ->
-      let subPathMap = fromMaybe emptyPathMap (HM.lookup pathPiece m)
-      in PathMap as (HM.insert pathPiece (insertPathMap' xs action subPathMap) m) pm
-    VarCons xs -> PathMap as m (insertPolyMap xs (\v vs -> action (HCons v vs)) pm)
+    Empty -> PathMap (action HNil : h) s p
+    StaticCons pathPiece path' ->
+      let subPathMap = fromMaybe emptyPathMap (HM.lookup pathPiece s)
+      in PathMap h (HM.insert pathPiece (insertPathMap' path' action subPathMap) s) p
+    VarCons path' ->
+      let alterFn = Just . insertPathMap' path' (\vs v -> action (HCons v vs))
+                         . fromMaybe emptyPathMap
+      in PathMap h s (PM.alter alterFn p)
 
 insertPathMap :: RouteHandle m a -> PathMap (m a) -> PathMap (m a)
 insertPathMap (RouteHandle path action) = insertPathMap' path (hListUncurry action)
 
 match :: PathMap x -> [T.Text] -> [x]
-match (PathMap as _ _) [] = as
-match (PathMap _ m pm) (pp:pps) =
-  let staticMatches = maybeToList (HM.lookup pp m) >>= flip match pps
-      varMatches = lookupPolyMap pp pps pm
+match (PathMap h _ _) [] = h
+match (PathMap _ s p) (pp:pps) =
+  let staticMatches = maybeToList (HM.lookup pp s) >>= flip match pps
+      varMatches = PM.lookupConcat (fromPathPiece pp)
+                     (\piece pathMap' -> fmap ($ piece) (match pathMap' pps)) p
   in staticMatches ++ varMatches
 
 -- | A route parameter
