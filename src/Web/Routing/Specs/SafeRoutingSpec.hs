@@ -8,6 +8,7 @@
 module Web.Routing.Specs.SafeRoutingSpec where
 
 import Test.Hspec
+import Data.HVect
 
 import Control.Monad.Identity
 import Web.Routing.SafeRouting
@@ -21,8 +22,8 @@ data ReturnVar
    | ListVar [ReturnVar]
    deriving (Show, Eq, Read)
 
-defR :: (Monad m, HListElim ts (m ReturnVar) ~ HListElim ts x) => Path ts -> HListElim ts x -> RegistryT (SafeRouter m ReturnVar) middleware Bool m ()
-defR path action = hookRoute True (SafeRouterPath path) (HListElim' action)
+defR :: (Monad m, HVectElim ts (m ReturnVar) ~ HVectElim ts x) => Path ts -> HVectElim ts x -> RegistryT (SafeRouter m ReturnVar) middleware Bool m ()
+defR path action = hookRoute True (SafeRouterPath path) (HVectElim' action)
 
 
 spec :: Spec

@@ -8,27 +8,28 @@
 module Web.Routing.SafeRouting where
 
 import qualified Data.PolyMap as PM
+import Data.HVect
 import Web.Routing.AbstractRouter
 
-import Data.HList
 import Data.Maybe
-import Data.Monoid
+import Data.Monoid (Monoid (..))
 import Data.String
+import Data.Typeable (Typeable)
 import Web.PathPieces
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 
 data RouteHandle m a
-   = forall as. RouteHandle (Path as) (HListElim as (m a))
+   = forall as. RouteHandle (Path as) (HVectElim as (m a))
 
-newtype HListElim' x ts = HListElim' { flipHListElim :: HListElim ts x }
+newtype HVectElim' x ts = HVectElim' { flipHVectElim :: HVectElim ts x }
 
 data SafeRouter (m :: * -> *) a = SafeRouter
 
 instance AbstractRouter (SafeRouter m a) where
     newtype Registry (SafeRouter m a) = SafeRouterReg (PathMap (m a))
     newtype RoutePath (SafeRouter m a) xs = SafeRouterPath (Path xs)
-    type RouteAction (SafeRouter m a) = HListElim' (m a)
+    type RouteAction (SafeRouter m a) = HVectElim' (m a)
     type RouteAppliedAction (SafeRouter m a) = m a
     subcompCombine (SafeRouterPath p1) (SafeRouterPath p2) =
         SafeRouterPath $
@@ -37,18 +38,11 @@ instance AbstractRouter (SafeRouter m a) where
     rootPath = SafeRouterPath Empty
     defRoute (SafeRouterPath path) action (SafeRouterReg m) =
         SafeRouterReg $
-        insertPathMap (RouteHandle path (flipHListElim action)) m
+        insertPathMap (RouteHandle path (flipHVectElim action)) m
     matchRoute (SafeRouterReg m) pathPieces =
         let matches = match m pathPieces
         in zip (replicate (length matches) HM.empty) matches
 
-type family HListElim (ts :: [*]) (a :: *) :: *
-type instance HListElim '[] a = a
-type instance HListElim (t ': ts) a = t -> HListElim ts a
-
-hListUncurry :: HListElim ts a -> HList ts -> a
-hListUncurry f HNil = f
-hListUncurry f (HCons x xs) = hListUncurry (f x) xs
 
 data Path (as :: [*]) where
   Empty :: Path '[] -- the empty path
@@ -73,7 +67,7 @@ instance Monoid (PathMap x) where
   mappend (PathMap h1 s1 p1) (PathMap h2 s2 p2) =
     PathMap (h1 `mappend` h2) (HM.unionWith mappend s1 s2) (PM.unionWith mappend p1 p2)
 
-insertPathMap' :: Path ts -> (HList ts -> x) -> PathMap x -> PathMap x
+insertPathMap' :: Path ts -> (HVect ts -> x) -> PathMap x -> PathMap x
 insertPathMap' path action (PathMap h s p) =
   case path of
     Empty -> PathMap (action HNil : h) s p
@@ -86,7 +80,7 @@ insertPathMap' path action (PathMap h s p) =
       in PathMap h s (PM.alter alterFn p)
 
 insertPathMap :: RouteHandle m a -> PathMap (m a) -> PathMap (m a)
-insertPathMap (RouteHandle path action) = insertPathMap' path (hListUncurry action)
+insertPathMap (RouteHandle path action) = insertPathMap' path (hVectUncurry action)
 
 match :: PathMap x -> [T.Text] -> [x]
 match (PathMap h _ _) [] = h
@@ -113,16 +107,16 @@ instance (a ~ '[]) => IsString (Path a) where
 root :: Path '[]
 root = Empty
 
-(</>) :: Path as -> Path bs -> Path (HAppendList as bs)
+(</>) :: Path as -> Path bs -> Path (Append as bs)
 (</>) Empty xs = xs
 (</>) (StaticCons pathPiece xs) ys = (StaticCons pathPiece (xs </> ys))
 (</>) (VarCons xs) ys = (VarCons (xs </> ys))
 
-renderRoute :: Path as -> HList as -> T.Text
+renderRoute :: Path as -> HVect as -> T.Text
 renderRoute p h =
     T.intercalate "/" $ renderRoute' p h
 
-renderRoute' :: Path as -> HList as -> [T.Text]
+renderRoute' :: Path as -> HVect as -> [T.Text]
 renderRoute' Empty _ = []
 renderRoute' (StaticCons pathPiece pathXs) paramXs =
     ( pathPiece : renderRoute' pathXs paramXs )
@@ -131,7 +125,7 @@ renderRoute' (VarCons pathXs) (HCons val paramXs) =
 renderRoute' _ _ =
     error "This will never happen."
 
-parse :: Path as -> [T.Text] -> Maybe (HList as)
+parse :: Path as -> [T.Text] -> Maybe (HVect as)
 parse Empty [] = Just HNil
 parse _ [] = Nothing
 parse path (pathComp : xs) =
