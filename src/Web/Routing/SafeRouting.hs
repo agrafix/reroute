@@ -113,7 +113,9 @@ type Var a = Path (a ': '[])
 
 -- | A static route piece
 static :: String -> Path '[]
-static s = StaticCons (T.pack s) Empty
+static s =
+  let pieces = filter (not . T.null) $ T.splitOn "/" $ T.pack s
+  in foldr StaticCons Empty pieces
 
 instance (a ~ '[]) => IsString (Path a) where
     fromString = static

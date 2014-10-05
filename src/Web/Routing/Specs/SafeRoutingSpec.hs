@@ -31,7 +31,7 @@ defR path action = hookRoute True (SafeRouterPath path) (HVectElim' action)
 spec :: Spec
 spec =
     describe "SafeRouting Spec" $
-    do it "shoud match known routes" $
+    do it "should match known routes" $
           do checkRoute "" [StrVar "root"]
              checkRoute "/bar" [StrVar "bar"]
        it "shoudn't match unknown routes" $
@@ -89,7 +89,7 @@ spec =
                  return (ListVar [IntVar i, IntVar i2])
              defR ("entry" </> var </> var) $ \i st ->
                  return (ListVar [IntVar i, StrVar st])
-             defR ("entry" </> "bytags" </> var </> var) $ \i st ->
+             defR ("entry/bytags" </> var </> var) $ \i st ->
                  return (ListVar [IntVar i, StrVar st])
              defR ("entry" </> var </> "rel" </> var) $ \i i2 ->
                  return (ListVar [IntVar i, IntVar i2])
