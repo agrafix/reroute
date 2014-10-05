@@ -13,6 +13,8 @@ import Data.HVect
 import Control.Monad.Identity
 import Web.Routing.SafeRouting
 import Web.Routing.AbstractRouter
+import Data.Monoid (mconcat)
+import Control.Applicative (Applicative (..))
 import qualified Data.Text as T
 
 data ReturnVar
@@ -46,10 +48,29 @@ spec =
           do checkRoute "/bar/5" [IntVar 5, StrVar "5"]
              checkRoute "/bar/bingo" [StrVar "bar/bingo", StrVar "bingo"]
              checkRoute "/entry/1/audit" [IntVar 1,ListVar [IntVar 1,StrVar "audit"]]
+       it "should provide an Applicative interface" $
+          do let numbers =
+                   mconcat
+                   [ singleton var id
+                   , singleton ("forty" </> "two") (42 :: Int)
+                   ]
+                 operators =
+                   mconcat
+                   [ singleton "plus" ((+) :: Int -> Int -> Int)
+                   , singleton "mult" (*)
+                   ]
+                 routes = operators <*> numbers <*> numbers
+                 check path val = match routes (pieces path) `shouldBe` [val]
+             check "/plus/forty/two/forty/two" (42+42)
+             check "/mult/forty/two/3" (42*3)
+             check "/plus/5/89" 94
     where
+      pieces :: T.Text -> [T.Text]
+      pieces = filter (not . T.null) . T.splitOn "/"
+      
       checkRoute :: T.Text -> [ReturnVar] -> Expectation
       checkRoute r x =
-          let matches = handleFun (filter (not . T.null) $ T.splitOn "/" r)
+          let matches = handleFun (pieces r)
           in (map (runIdentity . snd) matches) `shouldBe` x
 
       handleFun :: [T.Text] -> [(ParamMap, Identity ReturnVar)]

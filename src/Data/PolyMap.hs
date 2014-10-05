@@ -7,7 +7,8 @@
 module Data.PolyMap
   ( PolyMap, empty
   , lookup, lookupApply, lookupApplyAll, lookupConcat
-  , alter, insertWith, unionWith, union
+  , alter,  updateAll, insertWith
+  , unionWith, union
   , zipWith', zipWith, zip, ap
   ) where
 
@@ -109,6 +110,13 @@ alter (g :: Maybe (f (p -> a)) -> Maybe (f (p -> a))) polyMap =
           then insertHere polyMap
           else PMCons w (alter g polyMap')
   where insertHere = maybe id PMCons (g Nothing)
+
+updateAll ::
+     (forall p. c p => f (p -> a) -> g (p -> b))
+  -> PolyMap c f a
+  -> PolyMap c g b
+updateAll _ PMNil = PMNil
+updateAll f (PMCons v pm) = PMCons (f v) (updateAll f pm)
 
 insertWith ::
   (Typeable p, c p)

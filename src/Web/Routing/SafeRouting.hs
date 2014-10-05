@@ -12,7 +12,9 @@ import Data.HVect
 import Web.Routing.AbstractRouter
 
 import Data.Maybe
+import Data.List (foldl')
 import Data.Monoid (Monoid (..))
+import Control.Applicative (Applicative (..), Alternative (..))
 import Data.String
 import Data.Typeable (Typeable)
 import Web.PathPieces
@@ -59,6 +61,16 @@ data PathMap x =
 instance Functor PathMap where
   fmap f (PathMap h s p) = PathMap (fmap f h) (fmap (fmap f) s) (fmap f p)
 
+instance Applicative PathMap where
+  pure x = PathMap [x] mempty PM.empty
+  PathMap h s p <*> y =
+    let start = PathMap mempty (fmap (<*> y) s) (PM.updateAll (\a -> fmap flip a <*> y) p)
+    in foldl' (\pm f -> pm `mappend` fmap f y) start h
+
+instance Alternative PathMap where
+  empty = emptyPathMap
+  (<|>) = mappend
+
 emptyPathMap :: PathMap x
 emptyPathMap = PathMap mempty mempty PM.empty
 
@@ -78,6 +90,9 @@ insertPathMap' path action (PathMap h s p) =
       let alterFn = Just . insertPathMap' path' (\vs v -> action (HCons v vs))
                          . fromMaybe emptyPathMap
       in PathMap h s (PM.alter alterFn p)
+
+singleton :: Path ts -> HVectElim ts x -> PathMap x
+singleton path action = insertPathMap' path (hVectUncurry action) mempty
 
 insertPathMap :: RouteHandle m a -> PathMap (m a) -> PathMap (m a)
 insertPathMap (RouteHandle path action) = insertPathMap' path (hVectUncurry action)
