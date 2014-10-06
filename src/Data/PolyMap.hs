@@ -5,7 +5,7 @@
 {-# LANGUAGE GADTs #-}
 
 module Data.PolyMap
-  ( PolyMap, empty
+  ( PolyMap, empty, rnfHelper
   , lookup, lookupApply, lookupApplyAll, lookupConcat
   , alter,  updateAll, insertWith
   , unionWith, union
@@ -32,6 +32,10 @@ instance Alternative f => Monoid (PolyMap c f a) where
 
 empty :: PolyMap c f a
 empty = PMNil
+
+rnfHelper :: (forall p. c p => f (p -> a) -> ()) -> PolyMap c f a -> ()
+rnfHelper _ PMNil = ()
+rnfHelper h (PMCons v pm) = h v `seq` rnfHelper h pm
 
 lookup ::
   Typeable p

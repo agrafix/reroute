@@ -17,6 +17,7 @@ import Data.Monoid (Monoid (..))
 import Control.Applicative (Applicative (..), Alternative (..))
 import Data.String
 import Data.Typeable (Typeable)
+import Control.DeepSeq (NFData (..))
 import Web.PathPieces
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -70,6 +71,11 @@ instance Applicative PathMap where
 instance Alternative PathMap where
   empty = emptyPathMap
   (<|>) = mappend
+
+instance NFData (PathMap x) where
+  rnf (PathMap h s p) = whnfList h `seq` rnf s `seq` PM.rnfHelper rnf p
+    where whnfList [] = ()
+          whnfList (x:xs) = x `seq` whnfList xs
 
 emptyPathMap :: PathMap x
 emptyPathMap = PathMap mempty mempty PM.empty

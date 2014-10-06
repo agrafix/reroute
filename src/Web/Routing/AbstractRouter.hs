@@ -10,6 +10,7 @@ import Data.Hashable
 import Data.Maybe
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import Control.DeepSeq (NFData (..))
 
 class AbstractRouter r where
     data Registry r :: *
@@ -26,7 +27,7 @@ type ParamMap = HM.HashMap CaptureVar T.Text
 
 newtype CaptureVar
       = CaptureVar { unCaptureVar :: T.Text }
-      deriving (Show, Eq, Hashable)
+      deriving (Show, Eq, Hashable, NFData)
 
 newtype RegistryT r middleware reqTypes (m :: * -> *) a
     = RegistryT { runRegistryT :: RWST (RoutePath r '[]) [middleware] (RegistryState r reqTypes) m a }

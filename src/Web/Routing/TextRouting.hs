@@ -9,6 +9,7 @@ import Web.Routing.AbstractRouter
 
 import Data.Maybe
 import Data.String
+import Control.DeepSeq (NFData (..))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Vector as V
@@ -76,12 +77,21 @@ instance Eq RegexWrapper where
 instance Show RegexWrapper where
     show (RegexWrapper _ x) = show x
 
+instance NFData RegexWrapper where
+  rnf (RegexWrapper _ t) = rnf t
+
 data RouteNode
    = RouteNodeRegex !CaptureVar !RegexWrapper
    | RouteNodeCapture !CaptureVar
    | RouteNodeText !T.Text
    | RouteNodeRoot
    deriving (Show, Eq)
+
+instance NFData RouteNode where
+  rnf (RouteNodeRegex v w) = rnf v `seq` error "todo11"
+  rnf (RouteNodeCapture v) = rnf v
+  rnf (RouteNodeText t) = rnf t
+  rnf RouteNodeRoot = ()
 
 data RouteData a
    = RouteData
@@ -90,12 +100,18 @@ data RouteData a
    }
    deriving (Show, Eq)
 
+instance NFData a => NFData (RouteData a) where
+  rnf (RouteData n d) = rnf n `seq` rnf d
+
 data RoutingTree a
    = RoutingTree
    { rt_node :: !(RouteData a)
    , rt_children :: !(V.Vector (RoutingTree a))
    }
    deriving (Show, Eq)
+
+instance NFData a => NFData (RoutingTree a) where
+  rnf (RoutingTree n c) = rnf n `seq` rnf c
 
 buildRegex :: T.Text -> RegexWrapper
 buildRegex t =
