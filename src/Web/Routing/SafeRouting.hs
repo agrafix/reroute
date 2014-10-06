@@ -72,10 +72,8 @@ instance Alternative PathMap where
   empty = emptyPathMap
   (<|>) = mappend
 
-instance NFData (PathMap x) where
-  rnf (PathMap h s p) = whnfList h `seq` rnf s `seq` PM.rnfHelper rnf p
-    where whnfList [] = ()
-          whnfList (x:xs) = x `seq` whnfList xs
+instance NFData x => NFData (PathMap x) where
+  rnf (PathMap h s p) = rnf h `seq` rnf s `seq` PM.rnfHelper rnf p
 
 emptyPathMap :: PathMap x
 emptyPathMap = PathMap mempty mempty PM.empty
