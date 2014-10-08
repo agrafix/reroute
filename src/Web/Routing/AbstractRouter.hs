@@ -49,12 +49,13 @@ hookRoute :: (Monad m, AbstractRouter r, Eq reqTypes, Hashable reqTypes)
           -> RouteAction r as
           -> RegistryT r middleware reqTypes m ()
 hookRoute reqType path action =
-    modify $ \rs ->
-        rs { rs_registry =
-                 let reg = fromMaybe emptyRegistry (HM.lookup reqType (rs_registry rs))
-                     reg' = defRoute path action reg
-                 in HM.insert reqType reg' (rs_registry rs)
-           }
+    do basePath <- ask
+       modify $ \rs ->
+           rs { rs_registry =
+                    let reg = fromMaybe emptyRegistry (HM.lookup reqType (rs_registry rs))
+                        reg' = defRoute (basePath `subcompCombine` path) action reg
+                    in HM.insert reqType reg' (rs_registry rs)
+              }
 
 middleware :: Monad m
            => middleware
