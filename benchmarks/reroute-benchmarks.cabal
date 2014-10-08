@@ -20,11 +20,5 @@ executable reroute-benchmarks
     regex-compat,
     random,
     deepseq,
-    path-pieces
-    --bytestring,
-    --containers,
-    --deepseq,
-    --ghc-prim,
-    --hashable,
-    --mtl,
-    --random
+    path-pieces,
+    graph-core
