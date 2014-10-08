@@ -5,7 +5,6 @@ import Test.Hspec
 
 import Web.Routing.TextRouting
 import qualified Web.Routing.AbstractRouter as R
-import qualified Data.Vector as V
 import qualified Data.HashMap.Strict as HM
 
 spec :: Spec
@@ -13,7 +12,6 @@ spec =
     do matchNodeDesc
        matchRouteDesc
        parseRouteNodeDesc
-       addToRoutingTreeDesc
 
 matchNodeDesc :: Spec
 matchNodeDesc =
@@ -52,8 +50,8 @@ matchRouteDesc =
           ((oneMatch emptyParamMap [5])
             ++ oneMatch (vMap [("baz", "bingo")]) [3])
       multiMatch' =
-          ((oneMatch (vMap [("since", "audit"), ("cid", "1")]) [6])
-           ++ (oneMatch (vMap [("eid", "1")]) [8]))
+          ((oneMatch (vMap [("eid", "1")]) [8])
+           ++ (oneMatch (vMap [("since", "audit"), ("cid", "1")]) [6]))
       noMatches = []
       oneMatch pm m = [(pm, m)]
       routingTree =
@@ -81,30 +79,3 @@ parseRouteNodeDesc =
           parseRouteNode ":bar" `shouldBe` RouteNodeCapture (R.CaptureVar "bar")
        it "parses regex capture variables" $
           parseRouteNode "{bar:^[0-9]$}" `shouldBe` RouteNodeRegex (R.CaptureVar "bar") (buildRegex "^[0-9]$")
-
-addToRoutingTreeDesc :: Spec
-addToRoutingTreeDesc =
-    describe "addToRoutingTree" $
-    do it "adds the root node correctly" $
-          addToRoutingTree "/" [True] emptyT `shouldBe` baseRoute
-       it "adds a new branch correctly" $
-          addToRoutingTree "/foo/:bar" [True] emptyT `shouldBe` fooBar []
-       it "add a new subbranch correctly" $
-          addToRoutingTree "/foo/:bar/baz" [True] (fooBar []) `shouldBe` fooBar baz
-    where
-      emptyT = emptyRoutingTree
-      baseRoute = RoutingTree { rt_node = RouteData{rd_node = RouteNodeRoot, rd_data = Just [True]}, rt_children = V.empty}
-      baz = [ RoutingTree { rt_node = RouteData { rd_node = RouteNodeText "baz", rd_data = Just [True] },rt_children = V.empty }]
-      fooBar xs =
-          RoutingTree
-          { rt_node =
-                RouteData {rd_node = RouteNodeRoot, rd_data = Nothing }
-          , rt_children =
-              V.fromList
-                   [ RoutingTree { rt_node = RouteData{rd_node = RouteNodeText "foo", rd_data = Nothing}
-                                 , rt_children =
-                                     V.fromList
-                                          [ RoutingTree { rt_node = RouteData { rd_node = RouteNodeCapture (R.CaptureVar "bar")
-                                                                              , rd_data = Just [True]
-                                                                              }
-                                                        , rt_children = V.fromList xs}]}]}

@@ -7,12 +7,13 @@ module Web.Routing.TextRouting where
 
 import Web.Routing.AbstractRouter
 
-import Data.Maybe
 import Data.String
 import Control.DeepSeq (NFData (..))
+import qualified Data.Graph as G
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as VU
 import qualified Data.Vector.Mutable as VM
 import qualified Text.Regex as Regex
 
@@ -88,7 +89,7 @@ data RouteNode
    deriving (Show, Eq)
 
 instance NFData RouteNode where
-  rnf (RouteNodeRegex v w) = rnf v `seq` error "todo11"
+  rnf (RouteNodeRegex v w) = rnf v `seq` rnf w
   rnf (RouteNodeCapture v) = rnf v
   rnf (RouteNodeText t) = rnf t
   rnf RouteNodeRoot = ()
@@ -96,7 +97,7 @@ instance NFData RouteNode where
 data RouteData a
    = RouteData
    { rd_node :: !RouteNode
-   , rd_data :: Maybe a
+   , rd_data :: !(V.Vector a)
    }
    deriving (Show, Eq)
 
@@ -105,55 +106,92 @@ instance NFData a => NFData (RouteData a) where
 
 data RoutingTree a
    = RoutingTree
-   { rt_node :: !(RouteData a)
-   , rt_children :: !(V.Vector (RoutingTree a))
-   }
-   deriving (Show, Eq)
+   { rm_graph :: G.Graph
+   , rm_nodeManager :: V.Vector (RouteData a)
+   , rm_rootNode :: G.Node
+   } deriving (Show, Eq)
 
 instance NFData a => NFData (RoutingTree a) where
-  rnf (RoutingTree n c) = rnf n `seq` rnf c
+  rnf (RoutingTree g v r) = rnf g `seq` rnf v `seq` rnf r
+
+emptyRoutingTree :: RoutingTree a
+emptyRoutingTree =
+    let rootNode = 0
+        nodeManager = V.singleton (RouteData RouteNodeRoot V.empty)
+    in RoutingTree (G.addNode rootNode G.empty) nodeManager rootNode
+
+spawnNode :: G.Node -> RouteData a -> RoutingTree a -> (G.Node, RoutingTree a)
+spawnNode parent nodeData rm =
+    let nm' = V.snoc (rm_nodeManager rm) nodeData
+        nodeId = (V.length nm') - 1
+        g' = G.addNode nodeId (rm_graph rm)
+        g'' = G.addEdge parent nodeId g'
+    in (nodeId, RoutingTree g'' nm' (rm_rootNode rm))
+
+addActionToNode :: G.Node -> a -> RoutingTree a -> RoutingTree a
+addActionToNode nodeId nodeAction rm =
+    let routeDataOld = (rm_nodeManager rm) V.! nodeId
+        routeDataNew =
+            routeDataOld
+            { rd_data = V.snoc (rd_data routeDataOld) nodeAction
+            }
+        nm' = V.modify (\v -> VM.write v nodeId routeDataNew) (rm_nodeManager rm)
+    in rm { rm_nodeManager = nm' }
+
+addToRoutingTree :: T.Text -> a -> RoutingTree a -> RoutingTree a
+addToRoutingTree route action origRm =
+    case chunks of
+      [] ->
+          addActionToNode (rm_rootNode origRm) action origRm
+      _ ->
+          treeTraversal (map parseRouteNode chunks) (rm_rootNode origRm) origRm
+    where
+      chunks = filter (not . T.null) $ T.splitOn "/" route
+      treeTraversal [] _ rm = rm
+      treeTraversal (node : xs) parentGraphNode rm =
+          let graph = rm_graph rm
+              children = G.children graph parentGraphNode
+              nm = rm_nodeManager rm
+              matchingChild =
+                  VU.find (\nodeId -> node == rd_node (nm V.! nodeId)) children
+          in case matchingChild of
+               Just childId ->
+                   treeTraversal xs childId (if null xs then addActionToNode childId action rm else rm)
+               Nothing ->
+                   let (childId, rm') =
+                           spawnNode parentGraphNode (RouteData node (if null xs then V.singleton action else V.empty)) rm
+                   in treeTraversal xs childId rm'
+
+matchRoute :: T.Text -> RoutingTree a -> [(ParamMap, a)]
+matchRoute route globalMap =
+    matchRoute' (T.splitOn "/" route) globalMap
+
+matchRoute' :: [T.Text] -> RoutingTree a -> [(ParamMap, a)]
+matchRoute' routeParts globalRm =
+    findRoute (filter (not . T.null) routeParts) (rm_rootNode globalRm) emptyParamMap []
+    where
+      globalGraph = rm_graph globalRm
+      nodeManager = rm_nodeManager globalRm
+
+      findRoute [] parentId paramMap outMap =
+          outMap ++ (V.toList $ V.map (\action -> (paramMap, action)) (rd_data (nodeManager V.! parentId)))
+      findRoute (chunk : xs) parentId paramMap outMap =
+          let children = G.children globalGraph parentId
+          in VU.foldl' (\outV nodeId ->
+                           case matchNode chunk (rd_node $ nodeManager V.! nodeId) of
+                             (False, _) -> outV
+                             (True, mCapture) ->
+                                 let paramMap' =
+                                         case mCapture of
+                                           Nothing -> paramMap
+                                           Just (var, val) ->
+                                               HM.insert var val paramMap
+                                 in (findRoute xs nodeId paramMap' outMap) ++ outV
+                      ) [] children
 
 buildRegex :: T.Text -> RegexWrapper
 buildRegex t =
     RegexWrapper (Regex.mkRegex $ T.unpack t) t
-
-emptyRoutingTree :: RoutingTree a
-emptyRoutingTree =
-    RoutingTree (RouteData RouteNodeRoot Nothing) V.empty
-
-mergeData :: Maybe a -> Maybe a -> Maybe a
-mergeData (Just _) (Just _) =
-    error "Spock error: Don't define the same route twice!"
-mergeData (Just a) _ = Just a
-mergeData _ (Just b) = Just b
-mergeData _ _ = Nothing
-
-addToRoutingTree :: T.Text -> a -> RoutingTree a -> RoutingTree a
-addToRoutingTree route dat currTree =
-    let applyTree [] tree = tree
-        applyTree (current:xs) tree =
-            let children = V.map (\(RoutingTree d _) -> rd_node d) (rt_children tree)
-                currentDat =
-                    case xs of
-                      [] -> Just dat
-                      _ -> Nothing
-                children' =
-                    case V.findIndex (==current) children of
-                      Nothing ->
-                          let h = applyTree xs $ RoutingTree (RouteData current currentDat) V.empty
-                          in V.cons h (rt_children tree)
-                      Just idx ->
-                          let origNode = (V.!) (rt_children tree) idx
-                              matchingNode = rt_node $ origNode
-                              appliedNode = matchingNode { rd_data = mergeData (rd_data matchingNode) currentDat }
-                          in V.modify (\v -> VM.write v idx (applyTree xs $ RoutingTree appliedNode (rt_children origNode))) (rt_children tree)
-            in tree { rt_children = children' }
-    in case filter (not . T.null) $ T.splitOn "/" route of
-         [] ->
-             let currNode = rt_node currTree
-                 currNode' = currNode { rd_data = mergeData (rd_data currNode) (Just dat) }
-             in currTree { rt_node = currNode' }
-         xs -> applyTree (map parseRouteNode xs) currTree
 
 parseRouteNode :: T.Text -> RouteNode
 parseRouteNode node =
@@ -179,48 +217,6 @@ parseRouteNode node =
 
 emptyParamMap :: ParamMap
 emptyParamMap = HM.empty
-
-matchRoute :: T.Text -> RoutingTree a -> [(ParamMap, a)]
-matchRoute route globalTree =
-    matchRoute' (T.splitOn "/" route) globalTree
-
-matchRoute' :: [T.Text] -> RoutingTree a -> [(ParamMap, a)]
-matchRoute' routeParts globalTree =
-    case filter (not . T.null) routeParts of
-      [] ->
-          case rd_data $ rt_node globalTree of
-            Nothing -> []
-            Just action -> [(emptyParamMap, action)]
-      xs ->
-          findRoute xs (rt_children globalTree)
-    where
-      findRoute :: [T.Text] -> V.Vector (RoutingTree a) -> [(ParamMap, a)]
-      findRoute fullPath trees =
-          let foundPaths = V.foldl' (matchTree fullPath emptyParamMap) V.empty trees
-          in V.toList foundPaths
-          where
-            matchTree :: [T.Text] -> ParamMap -> V.Vector (ParamMap, a) -> RoutingTree a -> V.Vector (ParamMap, a)
-            matchTree [] _ vec _ = vec
-            matchTree (textNode : xs) paramMap vec rt =
-                case matchNode textNode (rd_node $ rt_node rt) of
-                  (False, _) ->
-                      vec
-                  (True, mCapture) ->
-                      let paramMap' =
-                              case mCapture of
-                                Nothing -> paramMap
-                                Just (var, value) ->
-                                    HM.insert var value paramMap
-                          nodeData = rd_data $ rt_node rt
-                          nodeChildren = rt_children rt
-                      in case xs of
-                           [] | isJust nodeData ->
-                                  V.snoc vec (paramMap', fromJust nodeData)
-                              | otherwise ->
-                                  vec
-                           _ ->
-                               let foundPaths = V.foldl' (matchTree xs paramMap') V.empty nodeChildren
-                               in V.concat [foundPaths, vec]
 
 matchNode :: T.Text -> RouteNode -> (Bool, Maybe (CaptureVar, T.Text))
 matchNode _ RouteNodeRoot = (False, Nothing)
