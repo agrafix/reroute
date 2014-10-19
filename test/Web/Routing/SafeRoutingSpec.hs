@@ -24,16 +24,12 @@ data ReturnVar
 defR :: (Monad m, m ReturnVar ~ x) => Path ts -> HVectElim ts x -> RegistryT (SafeRouter m ReturnVar) middleware Bool m ()
 defR path action = hookRoute True (SafeRouterPath path) (HVectElim' action)
 
-
 spec :: Spec
 spec =
     describe "SafeRouting Spec" $
     do it "should match known routes" $
           do checkRoute "" [StrVar "root"]
              checkRoute "/bar" [StrVar "bar"]
-       it "shoudn't match unknown routes" $
-          do checkRoute "/random" []
-             checkRoute "/baz" []
        it "should capture variables in routes" $
           do checkRoute "/bar/23/baz" [IntVar 23]
              checkRoute "/bar/23/baz/100" [ListVar [IntVar 23, IntVar 100]]
@@ -61,10 +57,13 @@ spec =
              check "/plus/forty/two/forty/two" (42+42)
              check "/mult/forty/two/3" (42*3)
              check "/plus/5/89" 94
+       it "should have a catch all route" $
+          do checkRoute "/aslkdjk/asdaskl/aslkjd" [StrVar "aslkdjk/asdaskl/aslkjd"]
+             checkRoute "/zuiasf/zuiasf" [StrVar "zuiasf/zuiasf"]
     where
       pieces :: T.Text -> [T.Text]
       pieces = filter (not . T.null) . T.splitOn "/"
-      
+
       checkRoute :: T.Text -> [ReturnVar] -> Expectation
       checkRoute r x =
           let matches = handleFun (pieces r)
@@ -93,3 +92,4 @@ spec =
              defR ("bar" </> "bingo") $ return (StrVar "bar/bingo")
              defR ("bar" </> var) $ (return . StrVar . T.pack)
              defR ("entry" </> var </> "audit") (return . IntVar)
+             hookAny True (return . StrVar . T.intercalate "/")

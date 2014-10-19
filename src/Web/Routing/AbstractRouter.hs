@@ -21,6 +21,7 @@ class AbstractRouter r where
     emptyRegistry :: Registry r
     rootPath :: RoutePath r '[]
     defRoute :: RoutePath r as -> RouteAction r as -> Registry r -> Registry r
+    fallbackRoute :: ([T.Text] -> RouteAppliedAction r) -> Registry r -> Registry r
     matchRoute :: Registry r -> [T.Text] -> [(ParamMap, RouteAppliedAction r)]
 
 type ParamMap = HM.HashMap CaptureVar T.Text
@@ -42,6 +43,17 @@ data RegistryState r reqTypes
    = RegistryState
    { rs_registry :: HM.HashMap reqTypes (Registry r)
    }
+
+hookAny :: (Monad m, AbstractRouter r, Eq reqTypes, Hashable reqTypes)
+        => reqTypes
+        -> ([T.Text] -> RouteAppliedAction r)
+        -> RegistryT r middleware reqTypes m ()
+hookAny reqType action =
+    modify $ \rs ->
+        rs { rs_registry =
+                 let reg = fromMaybe emptyRegistry (HM.lookup reqType (rs_registry rs))
+                 in HM.insert reqType (fallbackRoute action reg) (rs_registry rs)
+           }
 
 hookRoute :: (Monad m, AbstractRouter r, Eq reqTypes, Hashable reqTypes)
           => reqTypes

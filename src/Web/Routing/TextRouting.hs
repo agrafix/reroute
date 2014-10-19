@@ -51,19 +51,26 @@ newtype TActionAppl m r
 data TextRouter (m :: * -> *) a = TextRouter
 
 instance AbstractRouter (TextRouter m a) where
-    newtype Registry (TextRouter m a) = TextRouterRegistry (RoutingTree (m a))
+    newtype Registry (TextRouter m a) = TextRouterRegistry (RoutingTree (m a), [[T.Text] -> m a])
     newtype RoutePath (TextRouter m a) xs = TextRouterPath T.Text
     type RouteAction (TextRouter m a) = TAction m a
     type RouteAppliedAction (TextRouter m a) = m a
     subcompCombine (TextRouterPath p1) (TextRouterPath p2) =
         TextRouterPath $ combineRoute p1 p2
-    emptyRegistry = TextRouterRegistry emptyRoutingTree
+    emptyRegistry = TextRouterRegistry (emptyRoutingTree, [])
     rootPath = TextRouterPath "/"
-    defRoute (TextRouterPath p) (TAction a) (TextRouterRegistry tree) =
-        TextRouterRegistry $
-        addToRoutingTree p a tree
-    matchRoute (TextRouterRegistry tree) path =
-        matchRoute' path tree
+    defRoute (TextRouterPath p) (TAction a) (TextRouterRegistry (tree, cAll)) =
+        TextRouterRegistry
+        ( addToRoutingTree p a tree
+        , cAll
+        )
+    fallbackRoute routeDef (TextRouterRegistry (m, cAll)) =
+        TextRouterRegistry (m, cAll ++ [routeDef])
+    matchRoute (TextRouterRegistry (tree, cAll)) path =
+        let matches = matchRoute' path tree
+        in if null matches
+           then matches ++ ((zip (replicate (length cAll) HM.empty) $ map (\f -> f path) cAll))
+           else matches
 
 data RegexWrapper
    = RegexWrapper

@@ -30,21 +30,29 @@ newtype HVectElim' x ts = HVectElim' { flipHVectElim :: HVectElim ts x }
 data SafeRouter (m :: * -> *) a = SafeRouter
 
 instance AbstractRouter (SafeRouter m a) where
-    newtype Registry (SafeRouter m a) = SafeRouterReg (PathMap (m a))
+    newtype Registry (SafeRouter m a) = SafeRouterReg (PathMap (m a), [[T.Text] -> m a])
     newtype RoutePath (SafeRouter m a) xs = SafeRouterPath (Path xs)
     type RouteAction (SafeRouter m a) = HVectElim' (m a)
     type RouteAppliedAction (SafeRouter m a) = m a
     subcompCombine (SafeRouterPath p1) (SafeRouterPath p2) =
         SafeRouterPath $
         p1 </> p2
-    emptyRegistry = SafeRouterReg emptyPathMap
+    emptyRegistry = SafeRouterReg (emptyPathMap, [])
     rootPath = SafeRouterPath Empty
-    defRoute (SafeRouterPath path) action (SafeRouterReg m) =
-        SafeRouterReg $
-        insertPathMap (RouteHandle path (flipHVectElim action)) m
-    matchRoute (SafeRouterReg m) pathPieces =
+    defRoute (SafeRouterPath path) action (SafeRouterReg (m, cAll)) =
+        SafeRouterReg
+        ( insertPathMap (RouteHandle path (flipHVectElim action)) m
+        , cAll
+        )
+    fallbackRoute routeDef (SafeRouterReg (m, cAll)) =
+        SafeRouterReg (m, cAll ++ [routeDef])
+    matchRoute (SafeRouterReg (m, cAll)) pathPieces =
         let matches = match m pathPieces
-        in zip (replicate (length matches) HM.empty) matches
+            matches' =
+                if null matches
+                then matches ++ (map (\f -> f pathPieces) cAll)
+                else matches
+        in zip (replicate (length matches') HM.empty) matches'
 
 
 data Path (as :: [*]) where
