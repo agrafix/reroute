@@ -2,10 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
-#if MIN_VERSION_base(4,7,0)
-{-# LANGUAGE AllowAmbiguousTypes #-}
-#endif
-module Web.Routing.Specs.SafeRoutingSpec where
+module Web.Routing.SafeRoutingSpec where
 
 import Test.Hspec
 import Data.HVect
@@ -24,7 +21,7 @@ data ReturnVar
    | ListVar [ReturnVar]
    deriving (Show, Eq, Read)
 
-defR :: (Monad m, HVectElim ts (m ReturnVar) ~ HVectElim ts x) => Path ts -> HVectElim ts x -> RegistryT (SafeRouter m ReturnVar) middleware Bool m ()
+defR :: (Monad m, m ReturnVar ~ x) => Path ts -> HVectElim ts x -> RegistryT (SafeRouter m ReturnVar) middleware Bool m ()
 defR path action = hookRoute True (SafeRouterPath path) (HVectElim' action)
 
 

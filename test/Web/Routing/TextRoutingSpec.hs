@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Web.Routing.Specs.TextRoutingSpec (spec) where
+module Web.Routing.TextRoutingSpec (spec) where
 
 import Test.Hspec
 
