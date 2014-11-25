@@ -1,5 +1,5 @@
 name:                reroute
-version:             0.2.1.0
+version:             0.2.2.0
 synopsis:            abstract implementation of typed and untyped web routing
 description:         abstraction over how urls with/without parameters are mapped to their corresponding handlers
 homepage:            http://github.com/agrafix/reroute
@@ -19,16 +19,16 @@ library
                        Web.Routing.SafeRouting,
                        Web.Routing.TextRouting
   build-depends:       base >=4.6 && <4.8,
-                       transformers >=0.3 && <0.5,
-                       text >= 0.11.3.1 && <1.3,
+                       transformers >=0.3,
+                       text >= 0.11.3.1,
                        unordered-containers ==0.2.*,
                        regex-compat ==0.95.*,
-                       hashable >=1.2 && <1.3,
-                       mtl >=2.1 && <2.3,
-                       path-pieces >=0.1 && <0.2,
-                       vector >=0.10 && <0.11,
-                       deepseq >= 1.1.0.2 && < 1.4,
-                       graph-core >=0.2 && <0.3
+                       hashable >=1.2,
+                       mtl >=2.1,
+                       path-pieces >=0.1,
+                       vector >=0.10,
+                       deepseq >= 1.1.0.2,
+                       graph-core >=0.2.1
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options: -Wall -fno-warn-orphans
@@ -41,17 +41,17 @@ test-suite reroute-test
   other-modules:       Web.Routing.SafeRoutingSpec, Web.Routing.TextRoutingSpec
   build-depends:       base >=4.6 && <4.8,
                        reroute,
-                       transformers >=0.3 && <0.5,
-                       text >= 0.11.3.1 && <1.3,
+                       transformers >=0.3,
+                       text >= 0.11.3.1,
                        unordered-containers ==0.2.*,
                        regex-compat ==0.95.*,
-                       hashable >=1.2 && <1.3,
-                       mtl >=2.1 && <2.3,
-                       path-pieces >=0.1 && <0.2,
-                       hspec2 >=0.4 && <0.5,
-                       vector >=0.10 && <0.11,
-                       deepseq >= 1.1.0.2 && < 1.4,
-                       graph-core >=0.2 && <0.3
+                       hashable >=1.2,
+                       mtl >=2.1,
+                       path-pieces >=0.1,
+                       hspec == 2.*,
+                       vector >=0.10,
+                       deepseq >= 1.1.0.2,
+                       graph-core >=0.2.1
   default-language:    Haskell2010
   ghc-options: -Wall -fno-warn-orphans
 

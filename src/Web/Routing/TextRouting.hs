@@ -9,7 +9,7 @@ import Web.Routing.AbstractRouter
 
 import Data.String
 import Control.DeepSeq (NFData (..))
-import qualified Data.Graph as G
+import qualified Data.Core.Graph as G
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Vector as V
