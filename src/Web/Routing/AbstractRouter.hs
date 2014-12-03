@@ -101,7 +101,7 @@ runRegistry _ (RegistryT rwst) =
           case HM.lookup ty hm of
             Nothing -> []
             Just registry ->
-                matchRoute registry route
+                matchRoute registry (filter (not . T.null) route)
       initSt =
           RegistryState
           { rs_registry = HM.empty

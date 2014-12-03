@@ -29,9 +29,11 @@ spec =
     describe "SafeRouting Spec" $
     do it "should match known routes" $
           do checkRoute "" [StrVar "root"]
+             checkRoute "/" [StrVar "root"]
              checkRoute "/bar" [StrVar "bar"]
        it "should capture variables in routes" $
           do checkRoute "/bar/23/baz" [IntVar 23]
+             checkRoute "/bar/23/baz/" [IntVar 23]
              checkRoute "/bar/23/baz/100" [ListVar [IntVar 23, IntVar 100]]
              checkRoute "/bar/23/100" [ListVar [IntVar 23, IntVar 100]]
              checkRoute "/entry/344/2014-20-14T12:23" [ListVar [IntVar 344, StrVar "2014-20-14T12:23"]]

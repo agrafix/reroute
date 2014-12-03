@@ -29,8 +29,10 @@ matchRouteDesc =
     do it "shouldn't match unknown routes" $
           do matchRoute "random" routingTree `shouldBe` noMatches
              matchRoute "/baz" routingTree `shouldBe` noMatches
+             matchRoute "/baz/" routingTree `shouldBe` noMatches
        it "should match known routes" $
           do matchRoute "/" routingTree `shouldBe` oneMatch emptyParamMap [1]
+             matchRoute "" routingTree `shouldBe` oneMatch emptyParamMap [1]
              matchRoute "/bar" routingTree `shouldBe` oneMatch emptyParamMap [2]
        it "should capture variables in routes" $
           do matchRoute "/bar/5" routingTree `shouldBe` oneMatch (vMap [("baz", "5")]) [3]
