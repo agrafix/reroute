@@ -13,22 +13,24 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Data.HVect,
+  exposed-modules:
+                       Data.HVect,
                        Data.PolyMap,
                        Web.Routing.AbstractRouter,
                        Web.Routing.SafeRouting,
                        Web.Routing.TextRouting
-  build-depends:       base >=4.6 && <4.8,
-                       transformers >=0.3,
-                       text >= 0.11.3.1,
-                       unordered-containers ==0.2.*,
-                       regex-compat ==0.95.*,
+  build-depends:
+                       base >=4.6 && <5,
+                       deepseq >= 1.1.0.2,
+                       graph-core >=0.2.1,
                        hashable >=1.2,
                        mtl >=2.1,
                        path-pieces >=0.1,
-                       vector >=0.10,
-                       deepseq >= 1.1.0.2,
-                       graph-core >=0.2.1
+                       regex-compat >=0.95,
+                       text >= 0.11.3.1,
+                       transformers >=0.3,
+                       unordered-containers >=0.2,
+                       vector >=0.10
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options: -Wall -fno-warn-orphans
@@ -38,20 +40,17 @@ test-suite reroute-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
-  other-modules:       Web.Routing.SafeRoutingSpec, Web.Routing.TextRoutingSpec
-  build-depends:       base >=4.6 && <4.8,
+  other-modules:
+                       Web.Routing.SafeRoutingSpec,
+                       Web.Routing.TextRoutingSpec
+  build-depends:
+                       base,
+                       hspec,
+                       mtl,
                        reroute,
-                       transformers >=0.3,
-                       text >= 0.11.3.1,
-                       unordered-containers ==0.2.*,
-                       regex-compat ==0.95.*,
-                       hashable >=1.2,
-                       mtl >=2.1,
-                       path-pieces >=0.1,
-                       hspec == 2.*,
-                       vector >=0.10,
-                       deepseq >= 1.1.0.2,
-                       graph-core >=0.2.1
+                       text,
+                       unordered-containers,
+                       vector
   default-language:    Haskell2010
   ghc-options: -Wall -fno-warn-orphans
 
