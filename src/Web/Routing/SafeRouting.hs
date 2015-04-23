@@ -60,6 +60,11 @@ data Path (as :: [*]) where
   StaticCons :: T.Text -> Path as -> Path as -- append a static path piece to path
   VarCons :: (PathPiece a, Typeable a) => Path as -> Path (a ': as) -- append a param to path
 
+pathToRep :: Path as -> Rep as
+pathToRep Empty = RNil
+pathToRep (StaticCons _ p) = pathToRep p
+pathToRep (VarCons p) = RCons (pathToRep p)
+
 data PathMap x =
   PathMap
   { pm_here :: [x]
