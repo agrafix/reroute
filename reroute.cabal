@@ -5,9 +5,9 @@ description:         abstraction over how urls with/without parameters are mappe
 homepage:            http://github.com/agrafix/reroute
 license:             MIT
 license-file:        LICENSE
-author:              Alexander Thiemann <mail@agrafix.net>, Tim Baumann <tim@timbaumann.info>
-maintainer:          mail@agrafix.net
-copyright:           (c) 2014 - 2015 Alexander Thiemann <mail@agrafix.net>, Tim Baumann <tim@timbaumann.info>
+author:              Alexander Thiemann <mail@athiemann.net>, Tim Baumann <tim@timbaumann.info>
+maintainer:          Alexander Thiemann <mail@athiemann.net>
+copyright:           (c) 2014 - 2015 Alexander Thiemann <mail@athiemann.net>, Tim Baumann <tim@timbaumann.info>
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
