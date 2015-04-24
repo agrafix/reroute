@@ -1,5 +1,5 @@
 name:                reroute
-version:             0.2.2.1
+version:             0.2.3.0
 synopsis:            abstract implementation of typed and untyped web routing
 description:         abstraction over how urls with/without parameters are mapped to their corresponding handlers
 homepage:            http://github.com/agrafix/reroute
@@ -7,7 +7,7 @@ license:             MIT
 license-file:        LICENSE
 author:              Alexander Thiemann <mail@agrafix.net>, Tim Baumann <tim@timbaumann.info>
 maintainer:          mail@agrafix.net
-copyright:           (c) 2014 Alexander Thiemann <mail@agrafix.net>, Tim Baumann <tim@timbaumann.info>
+copyright:           (c) 2014 - 2015 Alexander Thiemann <mail@agrafix.net>, Tim Baumann <tim@timbaumann.info>
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
