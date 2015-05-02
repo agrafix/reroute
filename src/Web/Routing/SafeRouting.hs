@@ -8,7 +8,8 @@
 module Web.Routing.SafeRouting where
 
 import qualified Data.PolyMap as PM
-import Data.HVect
+import Data.HVect hiding (null)
+import qualified Data.HVect as HV
 import Web.Routing.AbstractRouter
 
 import Data.Maybe
@@ -104,15 +105,15 @@ insertPathMap' path action (PathMap h s p) =
       let subPathMap = fromMaybe emptyPathMap (HM.lookup pathPiece s)
       in PathMap h (HM.insert pathPiece (insertPathMap' path' action subPathMap) s) p
     VarCons path' ->
-      let alterFn = Just . insertPathMap' path' (\vs v -> action (HCons v vs))
+      let alterFn = Just . insertPathMap' path' (\vs v -> action (v :&: vs))
                          . fromMaybe emptyPathMap
       in PathMap h s (PM.alter alterFn p)
 
 singleton :: Path ts -> HVectElim ts x -> PathMap x
-singleton path action = insertPathMap' path (hVectUncurry action) mempty
+singleton path action = insertPathMap' path (HV.uncurry action) mempty
 
 insertPathMap :: RouteHandle m a -> PathMap (m a) -> PathMap (m a)
-insertPathMap (RouteHandle path action) = insertPathMap' path (hVectUncurry action)
+insertPathMap (RouteHandle path action) = insertPathMap' path (HV.uncurry action)
 
 match :: PathMap x -> [T.Text] -> [x]
 match (PathMap h _ _) [] = h
@@ -154,7 +155,7 @@ renderRoute' :: Path as -> HVect as -> [T.Text]
 renderRoute' Empty _ = []
 renderRoute' (StaticCons pathPiece pathXs) paramXs =
     ( pathPiece : renderRoute' pathXs paramXs )
-renderRoute' (VarCons pathXs) (HCons val paramXs) =
+renderRoute' (VarCons pathXs) (val :&: paramXs) =
     ( toPathPiece val : renderRoute' pathXs paramXs)
 renderRoute' _ _ =
     error "This will never happen."
@@ -174,4 +175,4 @@ parse path (pathComp : xs) =
             Nothing -> Nothing
             Just val ->
                 let finish = parse pathXs xs
-                in fmap (\parsedXs -> HCons val parsedXs) finish
+                in fmap (\parsedXs -> val :&: parsedXs) finish

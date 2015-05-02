@@ -5,7 +5,7 @@
 module Web.Routing.SafeRoutingSpec where
 
 import Test.Hspec
-import Data.HVect
+import Data.HVect hiding (singleton)
 
 import Control.Monad.Identity
 import Web.Routing.SafeRouting
