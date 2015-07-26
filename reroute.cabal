@@ -1,5 +1,5 @@
 name:                reroute
-version:             0.3.0.1
+version:             0.3.0.2
 synopsis:            abstract implementation of typed and untyped web routing
 description:         abstraction over how urls with/without parameters are mapped to their corresponding handlers
 homepage:            http://github.com/agrafix/reroute
@@ -33,7 +33,7 @@ library
                        transformers >=0.3,
                        unordered-containers >=0.2,
                        vector >=0.10,
-                       hvect >=0.1
+                       hvect >=0.2
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options: -Wall -fno-warn-orphans

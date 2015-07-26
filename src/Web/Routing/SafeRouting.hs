@@ -8,7 +8,7 @@
 module Web.Routing.SafeRouting where
 
 import qualified Data.PolyMap as PM
-import Data.HVect hiding (null)
+import Data.HVect hiding (null, length)
 import qualified Data.HVect as HV
 import Web.Routing.AbstractRouter
 
