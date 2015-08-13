@@ -2,6 +2,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
 module Web.Routing.AbstractRouter where
 
 import Control.Applicative
@@ -85,6 +86,20 @@ subcomponent basePath (RegistryT subReg) =
            childSt = parentSt
        (a, parentSt', middleware') <-
            lift $ runRWST subReg childBasePath childSt
+       put parentSt'
+       tell middleware'
+       return a
+
+swapMonad ::
+    (Monad n, Monad m, AbstractRouter r)
+    => (forall b. n b -> m b)
+    -> RegistryT r middleware reqTypes n a
+    -> RegistryT r middleware reqTypes m a
+swapMonad liftLower (RegistryT subReg) =
+    do parentSt <- get
+       basePath <- ask
+       (a, parentSt', middleware') <-
+           lift $ liftLower $ runRWST subReg basePath parentSt
        put parentSt'
        tell middleware'
        return a
